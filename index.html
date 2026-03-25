@@ -8,12 +8,14 @@
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-        body { overflow: hidden; color: #fff; background: #111; }
+        
+        /* Body default hitam, scroll diatur lewat Javascript nanti */
+        body { background: #111; color: #fff; }
 
         /* =========================================
            STYLE UNTUK TV DISPLAY 
            ========================================= */
-        #tv-display { display: none; width: 100vw; height: 100vh; position: relative; }
+        #tv-display { display: none; width: 100vw; height: 100vh; position: relative; overflow: hidden; }
         
         #start-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.9); display: flex; justify-content: center; align-items: center; z-index: 99999; cursor: pointer; transition: opacity 0.5s ease; }
         #start-screen h1 { font-size: 2rem; color: #f39c12; text-align: center; animation: pulse 1.5s infinite; }
@@ -44,13 +46,12 @@
 
         #alarm-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 1s ease; }
         #alarm-overlay.show { opacity: 1; pointer-events: all; }
-        #alarm-overlay h1 { font-size: 5rem; color: #f39c12; margin-bottom: 5px; text-transform: uppercase; }
+        #alarm-overlay h1 { font-size: 5rem; color: #f39c12; margin-bottom: 5px; text-transform: uppercase; text-align: center; }
         #alarm-overlay .alarm-clock { font-size: 3rem; margin-bottom: 20px; font-weight: 700; }
-        #alarm-overlay p.message { font-size: 2rem; margin-bottom: 10px; }
-        #alarm-overlay p.wudhu { font-size: 1.5rem; color: #e74c3c; animation: pulse 1s infinite; font-weight: 600; margin-bottom: 30px; }
+        #alarm-overlay p.message { font-size: 2rem; margin-bottom: 10px; text-align: center; }
+        #alarm-overlay p.wudhu { font-size: 1.5rem; color: #e74c3c; animation: pulse 1s infinite; font-weight: 600; margin-bottom: 30px; text-align: center;}
         #alarm-overlay .alarm-countdown { font-size: 1.5rem; color: #bbb; background: rgba(255, 255, 255, 0.1); padding: 10px 20px; border-radius: 10px; }
 
-        /* Running Text / Marquee */
         .running-text-container { position: fixed; bottom: 0; left: 0; width: 100%; background: #b56b27; color: #fff; padding: 10px 0; font-size: 1.5rem; font-weight: 600; z-index: 50; white-space: nowrap; overflow: hidden; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); }
         .marquee { display: inline-block; padding-left: 100%; animation: scroll 20s linear infinite; }
         @keyframes scroll { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
@@ -58,8 +59,8 @@
         /* =========================================
            STYLE UNTUK MOBILE REMOTE PANEL 
            ========================================= */
-        #mobile-remote { display: none; width: 100vw; min-height: 100vh; background: #f4f7f6; color: #333; padding: 20px; overflow-y: auto; }
-        .remote-header { text-align: center; margin-bottom: 30px; }
+        #mobile-remote { display: none; width: 100vw; min-height: 100vh; background: #f4f7f6; color: #333; padding: 20px; }
+        .remote-header { text-align: center; margin-bottom: 30px; margin-top: 10px; }
         .remote-header h2 { color: #b56b27; font-size: 1.8rem; }
         
         .control-card { background: #fff; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
@@ -123,6 +124,7 @@
         <div class="remote-header">
             <h2>📱 Panel Remote TV</h2>
             <p>Rumah Rizki Dashboard</p>
+            <p id="firebase-status" style="font-size: 0.8rem; color: #e74c3c; margin-top: 5px;">🔴 Menunggu Firebase Config...</p>
         </div>
 
         <div class="control-card">
@@ -157,10 +159,10 @@
 
     <script>
         // ---------------------------------------------------------
-        // TAHAP 1: KONFIGURASI FIREBASE (WAJIB DIGANTI NANTI OLEH IKI)
+        // 1. ISI FIREBASE CONFIG KAMU DI SINI AGAR REMOTE WORK!
         // ---------------------------------------------------------
         const firebaseConfig = {
-            // NANTI COPY DARI FIREBASE CONSOLE PROJECT KAMU KE SINI YA KI!
+            // HAPUS KODE INI, GANTI DENGAN CONFIG DARI FIREBASE PROJECT KAMU
             apiKey: "API_KEY_KAMU",
             authDomain: "PROJECT_ID.firebaseapp.com",
             databaseURL: "https://PROJECT_ID-default-rtdb.asia-southeast1.firebasedatabase.app", 
@@ -170,48 +172,65 @@
             appId: "APP_ID"
         };
         
-        // Inisialisasi Firebase
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+        let db;
+        let displayRef;
+
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            db = firebase.database();
+            displayRef = db.ref('rumahRizkiTV');
+            
+            // Ubah status jika berhasil inisialisasi (walaupun blm tentu ada ijin read/write)
+            if(document.getElementById('firebase-status')) {
+                document.getElementById('firebase-status').innerText = "🟢 Firebase Terpasang";
+                document.getElementById('firebase-status').style.color = "#2ecc71";
+            }
+        } catch (error) {
+            console.error("Firebase Error:", error);
+            if(document.getElementById('firebase-status')) {
+                document.getElementById('firebase-status').innerText = "🔴 Firebase Belum Dikonfigurasi!";
+            }
         }
-        const db = firebase.database();
-        const displayRef = db.ref('rumahRizkiTV');
 
         // ---------------------------------------------------------
-        // TAHAP 2: DETEKSI PERANGKAT (MOBILE vs DESKTOP/TV)
+        // 2. DETEKSI PERANGKAT & ATUR SCROLL
         // ---------------------------------------------------------
         const isMobile = window.innerWidth <= 900;
 
         if (isMobile) {
-            // TAMPILAN HP (REMOTE CONTROL)
+            // TAMPILAN HP (BISA SCROLL)
+            document.body.style.overflow = 'auto'; 
             document.getElementById('tv-display').style.display = 'none';
             document.getElementById('mobile-remote').style.display = 'block';
 
-            // Fungsi Kirim Perintah Tombol ke Firebase
             function sendCmd(commandName) {
-                displayRef.update({
-                    lastCommand: commandName,
-                    timestamp: Date.now() // Biar firebase deteksi ada perubahan waktu
-                });
-                alert('Perintah "' + commandName + '" terkirim ke TV!');
+                if(!displayRef) return alert("Firebase belum dikonfigurasi!");
+                displayRef.update({ lastCommand: commandName, timestamp: Date.now() })
+                    .then(() => alert('Perintah terkirim!'))
+                    .catch((e) => alert('Gagal mengirim! Cek Rules Firebase. Error: ' + e.message));
             }
 
-            // Fungsi Kirim Teks Pengumuman ke Firebase
             function updateMarquee() {
+                if(!displayRef) return alert("Firebase belum dikonfigurasi!");
                 const text = document.getElementById('input-marquee').value;
                 if(text !== "") {
-                    displayRef.update({ runningText: text });
-                    alert('Teks berhasil diubah di TV!');
-                    document.getElementById('input-marquee').value = '';
+                    displayRef.update({ runningText: text })
+                        .then(() => {
+                            alert('Teks TV Berhasil Diubah!');
+                            document.getElementById('input-marquee').value = '';
+                        })
+                        .catch((e) => alert('Gagal! Cek Rules Firebase.'));
                 }
             }
 
         } else {
-            // TAMPILAN TV (DISPLAY & LISTENER LOGIC)
+            // TAMPILAN TV (TIDAK BISA SCROLL)
+            document.body.style.overflow = 'hidden'; 
             document.getElementById('tv-display').style.display = 'block';
             document.getElementById('mobile-remote').style.display = 'none';
 
-            // --- YOUTUBE API SETUP ---
             let ytPlayer;
             let isPlayerReady = false;
             let appStarted = false;
@@ -246,7 +265,6 @@
                 adzanAudio.play().then(() => { adzanAudio.pause(); adzanAudio.currentTime = 0; }).catch(e=>e);
             }
 
-            // --- BACKGROUND SLIDER ---
             const images = ['image/img1.jpg', 'image/img2.jpg', 'image/img0.jpg', 'image/img2.jpg'];
             let currentImgIndex = 0;
             const bgSlider = document.getElementById('bg-slider');
@@ -258,41 +276,39 @@
             changeBackground();
             let bgInterval = setInterval(changeBackground, 10000);
 
-            // --- MENDENGARKAN PERINTAH DARI HP VIA FIREBASE ---
-            displayRef.on('value', (snapshot) => {
-                const data = snapshot.val();
-                if(!data) return;
+            // MENDENGARKAN PERINTAH FIREBASE
+            if(displayRef) {
+                displayRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if(!data) return;
 
-                // Update Running Text
-                if(data.runningText) {
-                    document.getElementById('tv-marquee').innerText = data.runningText;
-                }
-
-                // Eksekusi Command Tombol
-                if(data.lastCommand) {
-                    let cmd = data.lastCommand;
-                    if(cmd === 'makkah_play' && appStarted) ytPlayer.playVideo();
-                    if(cmd === 'makkah_pause' && appStarted) ytPlayer.pauseVideo();
-                    if(cmd === 'adzan_play' && appStarted) { adzanAudio.currentTime = 0; adzanAudio.play(); }
-                    if(cmd === 'ganti_bg') { changeBackground(); clearInterval(bgInterval); bgInterval = setInterval(changeBackground, 10000); }
-                    if(cmd === 'force_alarm_on') { 
-                        manualForceAlarm = true; 
-                        document.getElementById('alarm-overlay').classList.add('show');
-                        document.getElementById('alarm-title').innerText = "MOHON TENANG";
-                        document.getElementById('alarm-countdown').style.display = "none";
-                        if(appStarted) ytPlayer.pauseVideo();
+                    if(data.runningText) {
+                        document.getElementById('tv-marquee').innerText = data.runningText;
                     }
-                    if(cmd === 'force_alarm_off') { 
-                        manualForceAlarm = false; 
-                        document.getElementById('alarm-overlay').classList.remove('show');
-                        document.getElementById('alarm-countdown').style.display = "block";
-                        if(appStarted) ytPlayer.playVideo();
-                    }
-                }
-            });
 
-            // --- FETCH JADWAL & CLOCK LOGIC ---
-            // (Semua logika fetchJadwal, checkAlarm, updateClock dari kode sebelumnya tetap berjalan normal di sini)
+                    if(data.lastCommand) {
+                        let cmd = data.lastCommand;
+                        if(cmd === 'makkah_play' && appStarted) ytPlayer.playVideo();
+                        if(cmd === 'makkah_pause' && appStarted) ytPlayer.pauseVideo();
+                        if(cmd === 'adzan_play' && appStarted) { adzanAudio.currentTime = 0; adzanAudio.play(); }
+                        if(cmd === 'ganti_bg') { changeBackground(); clearInterval(bgInterval); bgInterval = setInterval(changeBackground, 10000); }
+                        if(cmd === 'force_alarm_on') { 
+                            manualForceAlarm = true; 
+                            document.getElementById('alarm-overlay').classList.add('show');
+                            document.getElementById('alarm-title').innerText = "MOHON TENANG";
+                            document.getElementById('alarm-countdown').style.display = "none";
+                            if(appStarted) ytPlayer.pauseVideo();
+                        }
+                        if(cmd === 'force_alarm_off') { 
+                            manualForceAlarm = false; 
+                            document.getElementById('alarm-overlay').classList.remove('show');
+                            document.getElementById('alarm-countdown').style.display = "block";
+                            if(appStarted) ytPlayer.playVideo();
+                        }
+                    }
+                });
+            }
+
             let jadwalHariIni = {};
             async function fetchJadwal() {
                 try {
@@ -315,7 +331,7 @@
 
             let isAdzanPlaying = false;
             function checkAlarm(now) {
-                if(manualForceAlarm) return; // Kalau lagi di-remote paksa tenang, abaikan jadwal otomatis
+                if(manualForceAlarm) return; 
                 
                 let isAlarmActive = false;
                 let activePrayerName = "";
